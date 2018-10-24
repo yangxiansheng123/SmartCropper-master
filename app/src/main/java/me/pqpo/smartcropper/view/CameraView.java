@@ -24,6 +24,7 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
     private Camera mCamera;
 
     private final int mDegree = 90;
+    public static final int ALLOW_PIC_LEN = 2000;       //最大允许的照片尺寸的长度   宽或者高
 
     public CameraView(Context context) {
         this(context, null);
@@ -78,18 +79,15 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         //先停止Camera的预览
-        try {
-            mCamera.stopPreview();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+//        try {
+//            mCamera.stopPreview();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         //这里可以做一些我们要做的变换。
 
         //重新开启Camera的预览功能
         try {
-
-
             Camera.Parameters parameters = mCamera.getParameters();
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
             /**
@@ -100,32 +98,35 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
 //            Point bestPreviewSizeValue1 = findBestPreviewSizeValue(parameters.getSupportedPreviewSizes());
 //            parameters.setPreviewSize(bestPreviewSizeValue1.x, bestPreviewSizeValue1.y);
 
-
+            //第一种方法
             //getSupportedPreviewSizes可以获取camera支持的picturesize和previewsize
-            Camera.Size maxPictureSize = parameters.getSupportedPictureSizes().get(0);
-            Camera.Size maxPreviewSize = parameters.getSupportedPreviewSizes().get(0);
-            for (int i = 0; i < parameters.getSupportedPictureSizes().size(); i++) {
-                Camera.Size s = parameters.getSupportedPictureSizes().get(i);
-                if (s.width > maxPictureSize.width) {
-                    maxPictureSize = s;
-                }
-                if(s.width==maxPictureSize.width&&s.height>maxPictureSize.height){
-                    maxPictureSize = s;
-                }
-            }
-            for (int i = 0; i < parameters.getSupportedPreviewSizes().size(); i++) {
-                Camera.Size s = parameters.getSupportedPreviewSizes().get(i);
-                if (s.width > maxPreviewSize.width) {
-                    maxPreviewSize = s;
-                }
-                if(s.width==maxPreviewSize.width&&s.height>maxPreviewSize.height){
-                    maxPreviewSize = s;
-                }
-            }
+//            Camera.Size maxPictureSize = parameters.getSupportedPictureSizes().get(0);
+//            Camera.Size maxPreviewSize = parameters.getSupportedPreviewSizes().get(0);
+//            for (int i = 0; i < parameters.getSupportedPictureSizes().size(); i++) {
+//                Camera.Size s = parameters.getSupportedPictureSizes().get(i);
+//                if (s.width > maxPictureSize.width) {
+//                    maxPictureSize = s;
+//                }
+//                if(s.width==maxPictureSize.width&&s.height>maxPictureSize.height){
+//                    maxPictureSize = s;
+//                }
+//            }
+//            for (int i = 0; i < parameters.getSupportedPreviewSizes().size(); i++) {
+//                Camera.Size s = parameters.getSupportedPreviewSizes().get(i);
+//                if (s.width > maxPreviewSize.width) {
+//                    maxPreviewSize = s;
+//                }
+//                if(s.width==maxPreviewSize.width&&s.height>maxPreviewSize.height){
+//                    maxPreviewSize = s;
+//                }
+//            }
+
+            //第二种方法
+            Camera.Size adapterSize = mCamera.getParameters().getPreviewSize();
+            Camera.Size maxPictureSize = findFitPicResolution(mCamera, (float) adapterSize.width / adapterSize.height);;
 
             parameters.setPictureSize(maxPictureSize.width, maxPictureSize.height);
-            parameters.setPreviewSize(maxPreviewSize.width, maxPreviewSize.height);
-
+//            parameters.setPreviewSize(maxPreviewSize.width, maxPreviewSize.height);
             mCamera.setParameters(parameters);
             mCamera.setPreviewDisplay(holder);
 
@@ -224,6 +225,34 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
         }
         return null;
     }
+
+    /**
+     * 返回合适的照片尺寸参数
+     *
+     * @param camera
+     * @param bl
+     * @return
+     */
+    private Camera.Size findFitPicResolution(Camera camera, float bl) throws Exception {
+        Camera.Parameters cameraParameters = camera.getParameters();
+        List<Camera.Size> supportedPicResolutions = cameraParameters.getSupportedPictureSizes();
+
+        Camera.Size resultSize = null;
+        for (Camera.Size size : supportedPicResolutions) {
+            if ((float) size.width / size.height == bl && size.width <= ALLOW_PIC_LEN && size.height <= ALLOW_PIC_LEN) {
+                if (resultSize == null) {
+                    resultSize = size;
+                } else if (size.width > resultSize.width) {
+                    resultSize = size;
+                }
+            }
+        }
+        if (resultSize == null) {
+            return supportedPicResolutions.get(0);
+        }
+        return resultSize;
+    }
+
 }
 
 
